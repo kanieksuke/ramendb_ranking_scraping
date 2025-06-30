@@ -219,7 +219,7 @@ ws = wb.active
 
 # --- ① 出力先列（新しい日付列）を決める ---
 date_col = None
-for col in range(2, ws.max_column + 2):  # B列(2)から順に
+for col in range(3, ws.max_column + 2):  # C列(3)から順に
     if ws.cell(row=1, column=col).value is None:
         ws.cell(row=1, column=col).value = today_str
         date_col = col
@@ -252,8 +252,11 @@ for row in csv_data:
         for r in range(2, ws.max_row + 2):
             if ws.cell(row=r, column=1).value is None:
                 ws.cell(row=r, column=1).value = shop_name
+                ws.cell(row=r, column=2).value = row["オープン日"]
                 matched_row = r
                 break
+    else:
+        ws.cell(row=matched_row, column=2).value = row["オープン日"]
 
     # 指定列にクリック回数を入力
     target_cell = ws.cell(row=matched_row, column=date_col)
@@ -264,12 +267,12 @@ for row in csv_data:
     try:
         prev_val = int(prev_cell.value)
         if click_count > prev_val:
-            target_cell.font = Font(color="0000FF")  # 青
+            target_cell.font = Font(color="000000FF")  # 青
         elif click_count < prev_val:
-            target_cell.font = Font(color="FF0000")  # 赤
+            target_cell.font = Font(color="00FF0000")  # 赤
         # 同値は色なし
     except (TypeError, ValueError):
-        target_cell.font = Font(color="FF0000")  # 前日が空欄など
+        target_cell.font = Font(color="00FF0000")  # 前日が空欄など
 
     updated_rows.append((matched_row, click_count))
 
@@ -288,19 +291,26 @@ all_sorted_rows = sorted_rows + [(r, None) for r in other_rows]
 new_rows = []
 
 for row_idx, _ in all_sorted_rows:
-    row_data = [ws.cell(row=row_idx, column=col).value for col in range(1, ws.max_column + 1)]
+    row_data = []
+    for col in range(1, ws.max_column + 1):
+        cell = ws.cell(row=row_idx, column=col)
+        row_data.append({
+            "value": cell.value,
+            "font": cell.font.copy()
+        })
     new_rows.append(row_data)
 
 # 旧データをクリア
 for r in range(2, ws.max_row + 1):
     for c in range(1, ws.max_column + 1):
         ws.cell(row=r, column=c).value = None
-        ws.cell(row=r, column=c).font = Font(color="000000")  # フォント色をリセット
+        ws.cell(row=r, column=c).font = Font(color="00000000")  # フォント色をリセット
 
 # 新しい順序で書き戻し
 for i, row_data in enumerate(new_rows, start=2):
     for j, val in enumerate(row_data, start=1):
-        ws.cell(row=i, column=j).value = val
+        ws.cell(row=i, column=j).value = val["value"]
+        ws.cell(row=i, column=j).font = val["font"]
 
 # --- ⑤ 保存＆CSV削除 ---
 wb.save(EXCEL_PATH)
@@ -308,6 +318,7 @@ wb.close()
 os.remove(CSV_PATH)
 
 print(f"Excelファイルを更新し、CSVファイルを削除しました：{EXCEL_PATH}")
+
 
 driver.quit()
 
